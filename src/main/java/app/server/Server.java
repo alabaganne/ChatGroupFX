@@ -5,6 +5,7 @@ import java.net.ServerSocket;
 import java.net.Socket;
 
 public class Server {
+    // Server is used to broadcast new messages in real time only
 
     private final ServerSocket serverSocket;
 

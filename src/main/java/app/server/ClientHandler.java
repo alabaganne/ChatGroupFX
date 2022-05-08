@@ -37,9 +37,9 @@ public class ClientHandler implements Runnable {
             this.socket = socket;
             this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             this.bufferedWriter= new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
-            // When a client connects their username is sent.
+
             this.clientUsername = bufferedReader.readLine();
-            // Add the new client handler to the array so they can receive messages from others.
+
             clientHandlers.add(this);
             broadcastMessage("SERVER: " + clientUsername + " has entered the chat!");
         } catch (IOException e) {
@@ -65,6 +65,17 @@ public class ClientHandler implements Runnable {
                 closeEverything(socket, bufferedReader, bufferedWriter);
                 break;
             }
+        }
+    }
+
+    // Send data to current client
+    public void sendData(String data) {
+        try {
+            bufferedWriter.write(data);
+            bufferedWriter.newLine();
+            bufferedWriter.flush();
+        } catch (IOException e) {
+            throw new RuntimeException(e);
         }
     }
 
