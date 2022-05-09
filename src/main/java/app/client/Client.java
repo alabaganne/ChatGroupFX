@@ -14,6 +14,7 @@ import javafx.stage.Stage;
 public class Client extends Application {
     public static User currentUser = null;
     public void start(Stage primaryStage) {
+        // Connect to the database
         new MyConnection();
 
         new Login(primaryStage);

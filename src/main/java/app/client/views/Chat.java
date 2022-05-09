@@ -2,27 +2,27 @@ package app.client.views;
 
 import app.client.Client;
 import app.client.db.MyConnection;
-import app.types.Message.Message;
+import app.types.Message;
+import javafx.application.Platform;
 import javafx.geometry.Insets;
 import javafx.scene.Scene;
+import javafx.scene.control.Alert;
 import javafx.scene.control.Button;
 import javafx.scene.control.ScrollPane;
 import javafx.scene.control.TextField;
 import javafx.scene.layout.HBox;
 import javafx.scene.layout.Priority;
 import javafx.scene.layout.VBox;
-import javafx.scene.text.Font;
-import javafx.scene.text.FontWeight;
 import javafx.scene.text.Text;
 import javafx.stage.Stage;
 
 import java.io.*;
 import java.net.Socket;
+import java.sql.PreparedStatement;
 import java.sql.ResultSet;
 import java.sql.SQLException;
 import java.sql.Statement;
 import java.util.ArrayList;
-import java.util.Scanner;
 
 public class Chat {
     private Stage window;
@@ -42,8 +42,11 @@ public class Chat {
             this.bufferedReader = new BufferedReader(new InputStreamReader(socket.getInputStream()));
             this.bufferedWriter= new BufferedWriter(new OutputStreamWriter(socket.getOutputStream()));
 
-            // this.listenForMessage();
-            // this.sendMessage();
+            bufferedWriter.write(Client.currentUser.name);
+            bufferedWriter.newLine();
+            bufferedWriter.flush();
+
+            this.listenForMessage();
         } catch (IOException e) {
             System.out.println("Error connecting to the socket");
             // Gracefully close everything.
@@ -65,38 +68,66 @@ public class Chat {
         scrollPane.setContent(messagesVBox);
 
         // Get messages from the database
-        String sql = "select u.name as sender, m.text as message " +
+        String sql = "select u.id as senderId, u.name as senderName, m.text as message " +
                 "from messages m " +
                 "left join users as u on u.id = m.userId " +
-                "order by m.created;";
+                "order by m.created desc;";
         Statement s = MyConnection.con.createStatement();
         ResultSet rs = s.executeQuery(sql);
         while(rs.next()) {
-            Text messageText = new Text();
-            String sender = rs.getString("sender");
-            String message = rs.getString("message");
-            messageText.setText(sender + ": " + message);
-            messagesVBox.getChildren().add(messageText);
+            appendToMessages(
+                    rs.getInt("senderId"),
+                    rs.getString("senderName"),
+                    rs.getString("message")
+            );
         }
 
         VBox vBox = new VBox(hBox, scrollPane);
         vBox.setPadding(new Insets(15));
-        scene = new Scene(vBox);
+        scene = new Scene(vBox, 400, 300);
     }
 
+    public void appendToMessages(int senderId, String senderName, String message) {
+        Text messageElement = new Text();
+
+        if(senderId == Client.currentUser.id) {
+            senderName = "You";
+        }
+        messageElement.setText(senderName + ": " + message);
+        messagesVBox.getChildren().add(messageElement);
+    }
 
     // Sending a message isn't blocking and can be done without spawning a thread, unlike waiting for a message.
     public void sendMessage() {
         try {
             String messageToSend = messageField.getText();
+            if(messageToSend.isEmpty()) {
+                Alert alert = new Alert(Alert.AlertType.WARNING);
+                alert.setContentText("Please type a message first!");
+                alert.show();
+                return;
+            }
+            // Store message in the db
+            PreparedStatement ps = MyConnection.con.prepareStatement(
+                    "insert into messages (userId, text) " +
+                            "values (?, ?)"
+            );
+            ps.setInt(1, Client.currentUser.id);
+            ps.setString(2, messageToSend);
+            ps.executeUpdate();
 
+            // Broadcast new message to other users
             bufferedWriter.write(Client.currentUser.name + ": " + messageToSend);
             bufferedWriter.newLine();
             bufferedWriter.flush();
             messageField.clear();
-        } catch (IOException e) {
+
+            // Display new message
+            appendToMessages(Client.currentUser.id, Client.currentUser.name, messageToSend);
+        } catch (IOException | SQLException e) {
             // Gracefully close everything.
             closeEverything(socket, bufferedReader, bufferedWriter);
+            System.out.println(e);
         }
     }
 
@@ -109,7 +140,13 @@ public class Chat {
                 try {
                     // Get the messages sent from other users and print it to the console.
                     msgFromGroupChat = bufferedReader.readLine();
-                    System.out.println(msgFromGroupChat);
+                    // Display new message received
+                    String finalMsgFromGroupChat = msgFromGroupChat;
+                    Platform.runLater(() -> {
+                        Text newMessageEl = new Text();
+                        newMessageEl.setText(finalMsgFromGroupChat);
+                        messagesVBox.getChildren().add(newMessageEl);
+                    });
                 } catch (IOException e) {
                     // Close everything gracefully.
                     closeEverything(socket, bufferedReader, bufferedWriter);
@@ -118,7 +155,7 @@ public class Chat {
         }).start();
     }
 
-    // Helper method to close everything so you don't have to repeat yourself.
+    // Helper method to close everything, so you don't have to repeat yourself.
     public void closeEverything(Socket socket, BufferedReader bufferedReader, BufferedWriter bufferedWriter) {
         // Note you only need to close the outer wrapper as the underlying streams are closed when you close the wrapper.
         // Note you want to close the outermost wrapper so that everything gets flushed.
@@ -142,8 +179,6 @@ public class Chat {
     }
 
     public void logout() {
-        // close socket connection
-        // clear user data
-        // redirect to login page
+        // todo
     }
 }

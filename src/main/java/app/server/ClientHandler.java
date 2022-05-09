@@ -41,7 +41,7 @@ public class ClientHandler implements Runnable {
             this.clientUsername = bufferedReader.readLine();
 
             clientHandlers.add(this);
-            broadcastMessage("SERVER: " + clientUsername + " has entered the chat!");
+            broadcastMessage(clientUsername + " has entered the chat!");
         } catch (IOException e) {
             // Close everything more gracefully.
             closeEverything(socket, bufferedReader, bufferedWriter);
@@ -101,7 +101,7 @@ public class ClientHandler implements Runnable {
     // If the client disconnects for any reason remove them from the list so a message isn't sent down a broken connection.
     public void removeClientHandler() {
         clientHandlers.remove(this);
-        broadcastMessage("SERVER: " + clientUsername + " has left the chat!");
+        broadcastMessage(clientUsername + " has left the chat!");
     }
 
     // Helper method to close everything so you don't have to repeat yourself.

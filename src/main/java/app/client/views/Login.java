@@ -83,11 +83,9 @@ public class Login {
             if(Client.currentUser.role.equals("admin")) {
                 new ManageUsers(window);
                 window.setScene(ManageUsers.scene);
-                System.out.println("Admin login");
             } else {
                 new Chat(window);
                 window.setScene(Chat.scene);
-                System.out.println("User login");
             }
 
         } catch (SQLException e) {

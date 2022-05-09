@@ -1,4 +1,4 @@
-package app.types.Message;
+package app.types;
 
 import java.sql.Date;
 

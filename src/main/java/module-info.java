@@ -6,5 +6,6 @@ module app {
     requires com.fasterxml.jackson.databind;
 
     opens app.client to javafx.fxml;
+    opens app.types to javafx.base;
     exports app.client;
 }
